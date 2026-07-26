@@ -10,4 +10,3 @@ go version
 kubectl version --client --output=yaml | head -2
 
 echo "Done"
-
