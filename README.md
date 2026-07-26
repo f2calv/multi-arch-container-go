@@ -216,22 +216,22 @@ flowchart LR
 
 - I highly recommend reading the official Docker blog posts about multi-arch images;
 
-  - https://www.docker.com/blog/multi-arch-images/
-  - https://www.docker.com/blog/multi-arch-build-and-images-the-simple-way/
-  - https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
+  - <https://www.docker.com/blog/multi-arch-images/>
+  - <https://www.docker.com/blog/multi-arch-build-and-images-the-simple-way/>
+  - <https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/>
 
 - Official Docker documentation about support/implementation for multi-arch images;
 
-  - https://docs.docker.com/build/building/multi-platform/
-  - https://docs.docker.com/build/builders/
-  - https://docs.docker.com/reference/cli/docker/buildx/build/
-  - https://docs.docker.com/build/cache/optimize/
+  - <https://docs.docker.com/build/building/multi-platform/>
+  - <https://docs.docker.com/build/builders/>
+  - <https://docs.docker.com/reference/cli/docker/buildx/build/>
+  - <https://docs.docker.com/build/cache/optimize/>
 
 - Official Go documentation useful for multi-arch builds;
 
-  - https://go.dev/doc/install/source#environment
-  - https://pkg.go.dev/cmd/go#hdr-Build_constraints
-  - https://go.dev/blog/slog
+  - <https://go.dev/doc/install/source#environment>
+  - <https://pkg.go.dev/cmd/go#hdr-Build_constraints>
+  - <https://go.dev/blog/slog>
 
 ## Further Resources
 
