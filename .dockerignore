@@ -1,0 +1,9 @@
+# Deny everything, then explicitly allow only what the build needs. Keeping the
+# build context minimal speeds up `docker build` and stops unrelated file edits
+# (docs, charts, IDE state, .git) from invalidating cached layers.
+*
+
+!go.mod
+!go.sum
+!appsettings.json
+!src/**

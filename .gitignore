@@ -1,0 +1,26 @@
+## ignore everything, then explictly add items.
+
+.vs/*
+.vscode/*
+!.vscode/extensions.json
+
+# Compiled binaries and build output
+# Note: leading slash anchors these to the repository root - without it the
+# pattern would also match the src/ and charts/ directories of the same name.
+/bin/
+/out/
+/multi-arch-container-go
+/multi-arch-container-go.exe
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories (only present when vendoring)
+/vendor/
