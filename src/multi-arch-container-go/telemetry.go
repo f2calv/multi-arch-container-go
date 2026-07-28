@@ -12,7 +12,7 @@ import (
 //
 // Verbosity is controlled by the conventional LOG_LEVEL environment variable
 // (debug|info|warn|error) and defaults to info.
-func initLogger(cfg AppConfig) *slog.Logger {
+func initLogger(cfg AppConfig) {
 	level := slog.LevelInfo
 	if value, ok := os.LookupEnv("LOG_LEVEL"); ok && value != "" {
 		if err := level.UnmarshalText([]byte(value)); err != nil {
@@ -29,8 +29,5 @@ func initLogger(cfg AppConfig) *slog.Logger {
 		handler = slog.NewTextHandler(os.Stdout, options)
 	}
 
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
-
-	return logger
+	slog.SetDefault(slog.New(handler))
 }

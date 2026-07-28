@@ -29,9 +29,7 @@ ARG APP_NAME=multi-arch-container-go
 # Copy ONLY the files that influence module resolution so that editing a .go file
 # reuses the cached download. `go mod download` is platform-agnostic, so it is
 # performed BEFORE TARGETARCH is introduced and is shared by every architecture.
-# Note: the [m] glob makes go.sum optional - this module has no external
-# dependencies, so `go mod tidy` never generates one.
-COPY go.mod go.su[m] ./
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     go mod download
 
