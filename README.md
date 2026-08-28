@@ -146,6 +146,8 @@ docker buildx imagetools inspect ghcr.io/f2calv/multi-arch-container-go
 
 ## Run on Kubernetes with Helm
 
+The public [universal `workload` chart](https://github.com/f2calv/helm-charts/tree/main/charts/workload) deploys this Go worker through the same framework-neutral values used for .NET, Rust, and other containerised runtimes. Sensible defaults keep the worker configuration small while retaining opt-in access to scheduling, networking, storage, autoscaling, and disruption controls.
+
 Create `multi-arch-container-go.values.yaml` with the pinned image and worker configuration:
 
 ```yaml
@@ -173,11 +175,11 @@ envVars:
   LOG_LEVEL: debug
 ```
 
-Install or upgrade the Deployment with version `1.0.0` of the shared `workload` chart:
+Install or upgrade the Deployment with version `1.0.2` of the universal `workload` chart:
 
 ```bash
 helm upgrade --install multi-arch-container-go oci://ghcr.io/f2calv/charts/workload \
-  --version 1.0.0 \
+  --version 1.0.2 \
   --values multi-arch-container-go.values.yaml
 
 kubectl logs --follow deployment/multi-arch-container-go
