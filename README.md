@@ -142,11 +142,46 @@ docker run --pull always --rm -it -e APP__GREETING="hello world" -e APP__INTERVA
 
 #Inspect the multi-architecture manifest list
 docker buildx imagetools inspect ghcr.io/f2calv/multi-arch-container-go
+```
 
-#Run pre-built image on Kubernetes (via kubectl)
-kubectl run -i --tty --attach multi-arch-container-go --image=ghcr.io/f2calv/multi-arch-container-go --image-pull-policy='Always'
-kubectl logs -f multi-arch-container-go
-#kubectl delete po multi-arch-container-go
+## Run on Kubernetes with Helm
+
+Create `multi-arch-container-go.values.yaml` with the pinned image and worker configuration:
+
+```yaml
+kind: Deployment
+replicaCount: 1
+
+fullnameOverride: multi-arch-container-go
+
+image:
+  repository: ghcr.io/f2calv/multi-arch-container-go
+  tag: 0.2.1
+  pullPolicy: IfNotPresent
+
+service:
+  enabled: false
+
+startupProbe: false
+readinessProbe: false
+livenessProbe: false
+
+envVars:
+  APP__GREETING: Hello from Go on Kubernetes
+  APP__INTERVAL_SECONDS: "5"
+  APP__LOG_FORMAT: json
+  LOG_LEVEL: debug
+```
+
+Install or upgrade the Deployment with version `1.0.0` of the shared `workload` chart:
+
+```bash
+helm upgrade --install multi-arch-container-go oci://ghcr.io/f2calv/charts/workload \
+  --version 1.0.0 \
+  --values multi-arch-container-go.values.yaml
+
+kubectl logs --follow deployment/multi-arch-container-go
+helm uninstall multi-arch-container-go
 ```
 
 ## Self-Build Container Image Locally
