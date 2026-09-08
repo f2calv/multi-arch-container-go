@@ -38,6 +38,8 @@ applyTo: '**/*.go'
 - **Handler setup lives in one place** (`telemetry.go`) and is installed exactly once from `main` via `slog.SetDefault`. Application code calls the package-level `slog.Info`/`slog.Error` functions or an injected `*slog.Logger`.
 - **Pass `context.Context` to `slog.InfoContext`** on paths that already carry a context, so trace correlation works.
 - **Verbosity via a `LOG_LEVEL` environment variable**, defaulting to `info`.
+- **Never log secrets or personal data.** Credentials, tokens, connection strings, full local paths and personally identifying values must never reach a handler.
+- **Guard expensive attributes on hot paths.** Argument expressions are evaluated before `slog` receives them; use `slog.Default().Enabled(ctx, level)` or the active logger's `Enabled` method before computing costly values that may be filtered out.
 
 ## Configuration
 
@@ -47,11 +49,13 @@ applyTo: '**/*.go'
 - **Keys are `snake_case`** in both the file and the environment. koanf lower-cases environment keys but preserves file keys verbatim, so `snake_case` is the only casing where both sources resolve to the same key.
 - **Section separator is `__`** in environment variables (`APP__INTERVAL_SECONDS`), matching the sibling .NET and Rust repositories.
 - **Validate at startup.** A configuration error must abort the process immediately with a clear message, never surface later as a runtime surprise.
+- **Keep validation errors non-sensitive.** Name the invalid key or constraint, but never include credentials, token values, connection strings or personally identifying configuration values.
 
 ## Concurrency
 
 - **`context.Context` is the first parameter** of any function that blocks, does I/O or spawns goroutines - `func Run(ctx context.Context, ...)`. Never store a context in a struct.
 - **Every goroutine has a defined exit.** If you cannot say what stops it, do not start it.
+- **Account for every goroutine.** Propagate cancellation, collect its error when relevant, and wait for owned goroutines during shutdown instead of abandoning background work.
 - **Long-running loops `select` over their work and `ctx.Done()`** so SIGINT/SIGTERM stop them promptly.
 - **Use `signal.NotifyContext`** for shutdown rather than a bare channel - it produces a context the whole call tree already understands.
 - **Share memory by communicating.** Prefer channels for hand-off; use `sync.Mutex` for genuinely shared state, keeping the critical section as small as possible.
@@ -67,6 +71,7 @@ applyTo: '**/*.go'
 - **`t.Setenv`, `t.TempDir` and `t.Cleanup`** instead of manual setup/teardown - they restore state automatically and mark the test as non-parallel where required.
 - **No shared mutable package-level state between tests.** Each test must be independently repeatable.
 - **Test the exported behaviour**, not private helpers, unless the helper carries genuinely tricky logic.
+- **Do not log secrets from tests.** Synthetic credentials and identifiers are still preferable because failed assertions and CI artifacts may be public.
 
 ## Documentation
 
