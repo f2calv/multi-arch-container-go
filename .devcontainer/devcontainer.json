@@ -1,8 +1,5 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/go
-//
-// Note: the sibling multi-arch-container-dotnet repository deliberately has NO
-// devcontainer - the .NET SDK is installed natively on the developer machine.
 {
   "name": "Go",
   "image": "mcr.microsoft.com/devcontainers/go:1-bookworm",

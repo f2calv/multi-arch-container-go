@@ -14,17 +14,18 @@ Although I could achieve my goal of deploying the same application to multiple a
 
 ## Sibling Repositories
 
-The same trivial worker application is implemented three times, once per language. The repository layout, file names, CI workflow and even the Dockerfile comments are kept as close to identical as possible - so a developer fluent in one language can learn another language's containerisation story simply by diffing two repositories.
+The same trivial worker application is implemented four times, once per language. The repository layout, file names, CI workflow and even the Dockerfile comments are kept as close to identical as possible - so a developer fluent in one language can learn another language's containerisation story simply by diffing two repositories.
 
 | Repository | Language | Build image | Final image | Cross-compilation mechanism |
 | --- | --- | --- | --- | --- |
 | [multi-arch-container-dotnet](https://github.com/f2calv/multi-arch-container-dotnet) | C# / .NET 10 | `mcr.microsoft.com/dotnet/sdk:10.0` | `mcr.microsoft.com/dotnet/runtime:10.0-noble-chiseled` | `dotnet publish -r <RID>` |
 | [multi-arch-container-go](https://github.com/f2calv/multi-arch-container-go) | Go | `golang:1-bookworm` | `gcr.io/distroless/static-debian12:nonroot` | `GOOS` / `GOARCH` / `GOARM` |
 | [multi-arch-container-rust](https://github.com/f2calv/multi-arch-container-rust) | Rust | `rust:1-bookworm` | `gcr.io/distroless/cc-debian12:nonroot` | `rustup target` + GNU cross linker |
+| [multi-arch-container-python](https://github.com/f2calv/multi-arch-container-python) | Python 3.14 | `python:3.14-slim-bookworm` | `python:3.14-slim-bookworm` | Architecture-neutral wheel + target-native runtime |
 
-Go has by far the easiest cross-compilation story of the three - the toolchain ships every target out of the box, so there is nothing to install and no cross linker to configure.
+Go has the easiest compiled cross-platform story - the toolchain ships every target out of the box, so there is nothing to install and no cross linker to configure.
 
-These repositories are **application code only** - Kubernetes packaging lives in the standalone [f2calv/helm-charts](https://github.com/f2calv/helm-charts) repository, which provides a single multi-purpose chart used by all three.
+These repositories are **application code only** - Kubernetes packaging lives in the standalone [f2calv/helm-charts](https://github.com/f2calv/helm-charts) repository, which provides a single multi-purpose chart used by all four.
 
 ## Goals
 
@@ -51,7 +52,7 @@ These repositories are **application code only** - Kubernetes packaging lives in
 
 ## Anatomy of the Dockerfile
 
-All three sibling repositories share the same two-stage shape:
+All four sibling repositories share the same two-stage shape:
 
 ```mermaid
 flowchart LR
@@ -89,11 +90,11 @@ slog.Info("git provenance",
 
 The equivalent in the sibling repositories:
 
-| | .NET | Go | Rust |
-| --- | --- | --- | --- |
-| Library | Serilog (behind `ILogger<T>`) | `log/slog` (standard library) | `tracing` + `tracing-subscriber` |
-| Text/JSON switch | `app:log_format` | `app.log_format` | `app.log_format` |
-| Verbosity | `Serilog:MinimumLevel` in `appsettings.json` | `LOG_LEVEL` env var | `RUST_LOG` env var |
+| | .NET | Go | Rust | Python |
+| --- | --- | --- | --- | --- |
+| Library | Serilog (behind `ILogger<T>`) | `log/slog` (standard library) | `tracing` + `tracing-subscriber` | `logging` (standard library) |
+| Text/JSON switch | `app:log_format` | `app.log_format` | `app.log_format` | `app.log_format` |
+| Verbosity | `Serilog:MinimumLevel` in `appsettings.json` | `LOG_LEVEL` env var | `RUST_LOG` env var | `LOG_LEVEL` env var |
 
 Set `APP__LOG_FORMAT=json` to emit newline-delimited JSON instead of human-readable console output:
 
@@ -117,9 +118,9 @@ koanf was chosen over the better-known [Viper](https://github.com/spf13/viper) b
 | `app.interval_seconds` | `APP__INTERVAL_SECONDS` | `3` | Delay between iterations |
 | `app.log_format` | `APP__LOG_FORMAT` | `text` | `text` or `json` |
 
-Keys are **snake_case** in both the file and the environment. koanf lower-cases environment keys but preserves file keys verbatim, so snake_case is the only casing where both sources resolve to the same key - and it is what the sibling .NET and Rust repositories use.
+Keys are **snake_case** in both the file and the environment. koanf lower-cases environment keys but preserves file keys verbatim, so snake_case is the only casing where both sources resolve to the same key - and it is what the sibling .NET, Rust and Python repositories use.
 
-Build provenance is a second, flat set of variables baked into the image by the `ARG`/`ENV` block of the [Dockerfile](Dockerfile) (populated by CI, or by `build.sh`/`build.ps1` locally). The same names are used by all three sibling repositories.
+Build provenance is a second, flat set of variables baked into the image by the `ARG`/`ENV` block of the [Dockerfile](Dockerfile) (populated by CI, or by `build.sh`/`build.ps1` locally). The same names are used by all four sibling repositories.
 
 | Environment Variable | Description |
 | --- | --- |
@@ -204,7 +205,7 @@ Or
 ./build.sh
 ```
 
-Both scripts are byte-identical across the three sibling repositories - every value they need is derived from git rather than hard-coded. They emulate the `image` job of [ci.yml](.github/workflows/ci.yml).
+Both scripts are byte-identical across the four sibling repositories - every value they need is derived from git rather than hard-coded. They emulate the `image` job of [ci.yml](.github/workflows/ci.yml).
 
 A multi-platform image cannot be loaded into the local docker image store, so by default the scripts build a single platform (`linux/amd64`) with `--load`. To exercise all three architectures, push instead of loading:
 
@@ -231,9 +232,9 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -trimpath -ldflags "-s -w" 
 
 > Note on layout: Go convention would normally place the entry point under `cmd/<name>/`. This repository uses `src/<name>/` instead, purely so the directory tree lines up with the sibling .NET repository (`src/multi-arch-container-dotnet/`) and Rust repository (`src/`).
 
-## Run All Three Side By Side
+## Run All Four Side By Side
 
-A [docker-compose.yml](https://github.com/f2calv/multi-arch-container-dotnet/blob/main/docker-compose.yml) in the sibling **.NET** repository builds and runs all three images together, which is the quickest way to confirm that configuration, environment variables and log output behave identically across the languages. Clone the three repositories alongside each other and run `docker compose up --build` from the .NET repository.
+A [docker-compose.yml](https://github.com/f2calv/multi-arch-container-dotnet/blob/main/docker-compose.yml) in the sibling **.NET** repository builds and runs all four images together, which is the quickest way to confirm that configuration, environment variables and log output behave identically across the languages. Clone the four repositories alongside each other and run `docker compose up --build` from the .NET repository.
 
 ## Deployment Flow
 
@@ -274,4 +275,5 @@ flowchart LR
 
 - [Click here for the .NET version of this repository...](https://github.com/f2calv/multi-arch-container-dotnet)
 - [Click here for the Rust version of this repository...](https://github.com/f2calv/multi-arch-container-rust)
-- [Click here for the Helm chart used to deploy all three...](https://github.com/f2calv/helm-charts)
+- [Click here for the Python version of this repository...](https://github.com/f2calv/multi-arch-container-python)
+- [Click here for the Helm chart used to deploy all four...](https://github.com/f2calv/helm-charts)
