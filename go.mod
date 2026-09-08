@@ -1,12 +1,12 @@
 module github.com/f2calv/multi-arch-container-go
 
-go 1.25
+go 1.27.1
 
 require (
-	github.com/knadh/koanf/parsers/json v1.0.0
-	github.com/knadh/koanf/providers/env v1.1.0
+	github.com/knadh/koanf/parsers/json v1.0.1
+	github.com/knadh/koanf/providers/env/v2 v2.0.1
 	github.com/knadh/koanf/providers/file v1.2.1
-	github.com/knadh/koanf/v2 v2.3.5
+	github.com/knadh/koanf/v2 v2.3.6
 )
 
 require (

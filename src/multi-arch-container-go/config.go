@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/knadh/koanf/parsers/json"
-	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
@@ -93,12 +93,22 @@ func loadConfiguration(path string) (Settings, error) {
 	}
 
 	// APP__GREETING -> app.greeting
-	if err := k.Load(env.Provider("APP__", ".", appEnvKey), nil); err != nil {
+	if err := k.Load(env.Provider(".", env.Opt{
+		Prefix: "APP__",
+		TransformFunc: func(key, value string) (string, any) {
+			return appEnvKey(key), value
+		},
+	}), nil); err != nil {
 		return settings, fmt.Errorf("loading APP__ environment variables: %w", err)
 	}
 
 	// GIT_TAG -> git_tag, GITHUB_RUN_ID -> github_run_id
-	if err := k.Load(env.Provider("GIT", ".", strings.ToLower), nil); err != nil {
+	if err := k.Load(env.Provider(".", env.Opt{
+		Prefix: "GIT",
+		TransformFunc: func(key, value string) (string, any) {
+			return strings.ToLower(key), value
+		},
+	}), nil); err != nil {
 		return settings, fmt.Errorf("loading GIT environment variables: %w", err)
 	}
 
