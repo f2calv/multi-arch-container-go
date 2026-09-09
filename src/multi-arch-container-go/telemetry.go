@@ -22,6 +22,13 @@ import (
 
 const instrumentationName = "github.com/f2calv/multi-arch-container-go"
 
+// multiHandler broadcasts every record to each of its children.
+//
+// This is hand-rolled because log/slog has no built-in fan-out: the console handler and the
+// otelslog bridge are two independent slog.Handler implementations, and slog.SetDefault accepts
+// only one. The four methods below are the whole slog.Handler interface, forwarded verbatim.
+// Serilog and tracing-subscriber both ship multi-sink support, which is why the sibling .NET and
+// Rust repositories have no equivalent of this type.
 type multiHandler struct {
 	handlers []slog.Handler
 }
@@ -33,6 +40,10 @@ type multiHandler struct {
 //
 // Verbosity is controlled by the conventional LOG_LEVEL environment variable
 // (debug|info|warn|error) and defaults to info.
+//
+// TODO: ctx is the signal-cancelling context from main, so a SIGTERM arriving during startup will
+//       fail resource and exporter construction. Build the providers from context.Background() and
+//       reserve the cancellable context for the worker.
 func initTelemetry(ctx context.Context, cfg AppConfig, version string) (func(context.Context) error, error) {
 	level := slog.LevelInfo
 	if value, ok := os.LookupEnv("LOG_LEVEL"); ok && value != "" {
