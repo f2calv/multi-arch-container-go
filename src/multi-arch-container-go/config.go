@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/json"
@@ -77,7 +79,7 @@ func defaultSettings() Settings {
 }
 
 // loadConfiguration layers configuration sources in ascending order of precedence:
-// struct defaults -> appsettings.json (optional) -> environment variables.
+// struct defaults -> appsettings.json -> appsettings.{APP_ENVIRONMENT}.json -> environment variables.
 //
 // This mirrors Microsoft.Extensions.Configuration in the sibling .NET repository and the
 // `config` crate in the sibling Rust repository.
@@ -85,10 +87,17 @@ func loadConfiguration(path string) (Settings, error) {
 	settings := defaultSettings()
 	k := koanf.New(".")
 
-	// The file is optional so the binary runs unchanged outside a container.
-	if err := k.Load(file.Provider(path), json.Parser()); err != nil {
-		if !strings.Contains(err.Error(), "no such file") && !strings.Contains(err.Error(), "cannot find the file") {
-			return settings, fmt.Errorf("loading %s: %w", path, err)
+	if err := loadOptionalConfigurationFile(k, path); err != nil {
+		return settings, err
+	}
+
+	environmentPath, err := environmentConfigurationPath(path, os.Getenv("APP_ENVIRONMENT"))
+	if err != nil {
+		return settings, err
+	}
+	if environmentPath != "" {
+		if err := loadOptionalConfigurationFile(k, environmentPath); err != nil {
+			return settings, err
 		}
 	}
 
@@ -115,8 +124,60 @@ func loadConfiguration(path string) (Settings, error) {
 	if err := k.Unmarshal("", &settings); err != nil {
 		return settings, fmt.Errorf("unmarshalling configuration: %w", err)
 	}
+	if err := settings.validate(); err != nil {
+		return settings, err
+	}
 
 	return settings, nil
+}
+
+func loadOptionalConfigurationFile(k *koanf.Koanf, path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return fmt.Errorf("checking %s: %w", path, err)
+	}
+
+	if err := k.Load(file.Provider(path), json.Parser()); err != nil {
+		return fmt.Errorf("loading %s: %w", path, err)
+	}
+
+	return nil
+}
+
+func environmentConfigurationPath(path string, environment string) (string, error) {
+	if environment == "" {
+		return "", nil
+	}
+
+	for _, character := range environment {
+		if !((character >= 'a' && character <= 'z') ||
+			(character >= 'A' && character <= 'Z') ||
+			(character >= '0' && character <= '9') ||
+			character == '-' || character == '_') {
+			return "", fmt.Errorf("APP_ENVIRONMENT contains an invalid character")
+		}
+	}
+
+	extension := filepath.Ext(path)
+	base := strings.TrimSuffix(path, extension)
+	return base + "." + environment + extension, nil
+}
+
+func (settings Settings) validate() error {
+	if strings.TrimSpace(settings.App.Greeting) == "" {
+		return fmt.Errorf("app.greeting must not be empty")
+	}
+	if settings.App.IntervalSeconds < 1 || settings.App.IntervalSeconds > 3600 {
+		return fmt.Errorf("app.interval_seconds must be between 1 and 3600")
+	}
+	if settings.App.LogFormat != LogFormatText && settings.App.LogFormat != LogFormatJSON {
+		return fmt.Errorf("app.log_format must be text or json")
+	}
+
+	return nil
 }
 
 // appEnvKey maps an APP__ prefixed environment variable name onto a dotted configuration key.

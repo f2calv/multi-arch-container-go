@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -47,6 +50,52 @@ func TestLoadConfigurationEnvironmentOverridesDefaults(t *testing.T) {
 	}
 	if settings.GitBranch != unknown {
 		t.Errorf("GitBranch = %q, want %q (unset variables keep their default)", settings.GitBranch, unknown)
+	}
+}
+
+func TestLoadConfigurationEnvironmentSpecificFileOverridesBase(t *testing.T) {
+	directory := t.TempDir()
+	basePath := filepath.Join(directory, "appsettings.json")
+	environmentPath := filepath.Join(directory, "appsettings.Development.json")
+	if err := os.WriteFile(basePath, []byte(`{"app":{"greeting":"base"}}`), 0o600); err != nil {
+		t.Fatalf("writing base configuration: %v", err)
+	}
+	if err := os.WriteFile(environmentPath, []byte(`{"app":{"greeting":"development"}}`), 0o600); err != nil {
+		t.Fatalf("writing environment configuration: %v", err)
+	}
+	t.Setenv("APP_ENVIRONMENT", "Development")
+
+	settings, err := loadConfiguration(basePath)
+	if err != nil {
+		t.Fatalf("loadConfiguration() returned an error: %v", err)
+	}
+
+	if want := "development"; settings.App.Greeting != want {
+		t.Errorf("Greeting = %q, want %q", settings.App.Greeting, want)
+	}
+}
+
+func TestLoadConfigurationRejectsInvalidAppSettings(t *testing.T) {
+	tests := map[string]string{
+		"blank greeting":     `{"app":{"greeting":" "}}`,
+		"interval too small": `{"app":{"interval_seconds":0}}`,
+		"interval too large": `{"app":{"interval_seconds":3601}}`,
+		"unknown log format": `{"app":{"log_format":"xml"}}`,
+	}
+
+	for name, contents := range tests {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "appsettings.json")
+			if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+				t.Fatalf("writing configuration: %v", err)
+			}
+
+			_, err := loadConfiguration(path)
+
+			if err == nil || !strings.HasPrefix(err.Error(), "app.") {
+				t.Errorf("loadConfiguration() error = %v, want app validation error", err)
+			}
+		})
 	}
 }
 

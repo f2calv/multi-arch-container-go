@@ -108,14 +108,17 @@ Configuration is layered by [koanf](https://github.com/knadh/koanf), in ascendin
 
 1. Struct defaults returned by `defaultSettings()`.
 2. [`appsettings.json`](appsettings.json) - optional, so the binary runs unchanged outside a container.
-3. Environment variables.
+3. An optional `appsettings.${APP_ENVIRONMENT}.json` file.
+4. Environment variables.
+
+`APP_ENVIRONMENT` accepts letters, numbers, hyphens and underscores. When it is unset, only the base file is loaded. Production values therefore remain in `appsettings.json` without a separate `appsettings.Production.json`.
 
 koanf was chosen over the better-known [Viper](https://github.com/spf13/viper) because it is modular: only the JSON parser and the file/env providers are pulled in, which keeps the static binary small.
 
 | Key | Environment variable | Default | Description |
 | --- | --- | --- | --- |
 | `app.greeting` | `APP__GREETING` | `Hello from a multi-architecture container` | Message logged each iteration |
-| `app.interval_seconds` | `APP__INTERVAL_SECONDS` | `3` | Delay between iterations |
+| `app.interval_seconds` | `APP__INTERVAL_SECONDS` | `3` | Delay between iterations, from 1 to 3600 seconds |
 | `app.log_format` | `APP__LOG_FORMAT` | `text` | `text` or `json` |
 
 Keys are **snake_case** in both the file and the environment. koanf lower-cases environment keys but preserves file keys verbatim, so snake_case is the only casing where both sources resolve to the same key - and it is what the sibling .NET, Rust and Python repositories use.
