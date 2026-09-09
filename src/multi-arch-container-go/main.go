@@ -53,6 +53,9 @@ func run() (runError error) {
 		runError = errors.Join(runError, shutdownTelemetry(shutdownCtx))
 	}()
 
+	// TODO: slog's default logger still points at the OTLP bridge after the providers above are
+	//       shut down, so anything logged by a later deferred call is dropped silently. Restore a
+	//       console-only default as the first step of the shutdown func.
 	slog.InfoContext(ctx, "Hit Ctrl-C to exit....")
 
 	// 4) The worker itself.
