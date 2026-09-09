@@ -32,8 +32,7 @@ jobs:
       tag-and-release: false
 
   app:
-    # Switch to @v1 after the Staticcheck compatibility fix is released.
-    uses: f2calv/gha-workflows/.github/workflows/app-build-go.yml@f2calv/2026-09-arg-echo
+    uses: f2calv/gha-workflows/.github/workflows/app-build-go.yml@v1
     permissions:
       contents: read
     needs: versioning
