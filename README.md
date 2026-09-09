@@ -122,10 +122,9 @@ Configuration is layered by [koanf](https://github.com/knadh/koanf), in ascendin
 
 1. Struct defaults returned by `defaultSettings()`.
 2. [`appsettings.json`](appsettings.json) - optional, so the binary runs unchanged outside a container.
-3. An optional `appsettings.${APP_ENVIRONMENT}.json` file.
-4. Environment variables.
+3. Environment variables.
 
-`APP_ENVIRONMENT` accepts letters, numbers, hyphens and underscores. When it is unset, only the base file is loaded. Production values therefore remain in `appsettings.json` without a separate `appsettings.Production.json`.
+The sibling .NET repository layers one extra source, an optional `appsettings.${DOTNET_ENVIRONMENT}.json`, because `Host.CreateApplicationBuilder` provides it for free. It is deliberately not reimplemented here - hand-rolling file resolution and merge semantics to match a built-in is not a trade worth making in a reference repository.
 
 koanf was chosen over the better-known [Viper](https://github.com/spf13/viper) because it is modular: only the JSON parser and the file/env providers are pulled in, which keeps the static binary small.
 

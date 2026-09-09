@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/json"
@@ -79,26 +78,18 @@ func defaultSettings() Settings {
 }
 
 // loadConfiguration layers configuration sources in ascending order of precedence:
-// struct defaults -> appsettings.json -> appsettings.{APP_ENVIRONMENT}.json -> environment variables.
+// struct defaults -> appsettings.json (optional) -> environment variables.
 //
 // This mirrors Microsoft.Extensions.Configuration in the sibling .NET repository and the
-// `config` crate in the sibling Rust repository.
+// `config` crate in the sibling Rust repository. Note that .NET additionally layers an
+// appsettings.{DOTNET_ENVIRONMENT}.json file, because its host provides that for free; it is
+// deliberately not reimplemented here.
 func loadConfiguration(path string) (Settings, error) {
 	settings := defaultSettings()
 	k := koanf.New(".")
 
 	if err := loadOptionalConfigurationFile(k, path); err != nil {
 		return settings, err
-	}
-
-	environmentPath, err := environmentConfigurationPath(path, os.Getenv("APP_ENVIRONMENT"))
-	if err != nil {
-		return settings, err
-	}
-	if environmentPath != "" {
-		if err := loadOptionalConfigurationFile(k, environmentPath); err != nil {
-			return settings, err
-		}
 	}
 
 	// APP__GREETING -> app.greeting
@@ -145,25 +136,6 @@ func loadOptionalConfigurationFile(k *koanf.Koanf, path string) error {
 	}
 
 	return nil
-}
-
-func environmentConfigurationPath(path string, environment string) (string, error) {
-	if environment == "" {
-		return "", nil
-	}
-
-	for _, character := range environment {
-		if !((character >= 'a' && character <= 'z') ||
-			(character >= 'A' && character <= 'Z') ||
-			(character >= '0' && character <= '9') ||
-			character == '-' || character == '_') {
-			return "", fmt.Errorf("APP_ENVIRONMENT contains an invalid character")
-		}
-	}
-
-	extension := filepath.Ext(path)
-	base := strings.TrimSuffix(path, extension)
-	return base + "." + environment + extension, nil
 }
 
 func (settings Settings) validate() error {

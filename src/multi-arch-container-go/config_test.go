@@ -53,28 +53,6 @@ func TestLoadConfigurationEnvironmentOverridesDefaults(t *testing.T) {
 	}
 }
 
-func TestLoadConfigurationEnvironmentSpecificFileOverridesBase(t *testing.T) {
-	directory := t.TempDir()
-	basePath := filepath.Join(directory, "appsettings.json")
-	environmentPath := filepath.Join(directory, "appsettings.Development.json")
-	if err := os.WriteFile(basePath, []byte(`{"app":{"greeting":"base"}}`), 0o600); err != nil {
-		t.Fatalf("writing base configuration: %v", err)
-	}
-	if err := os.WriteFile(environmentPath, []byte(`{"app":{"greeting":"development"}}`), 0o600); err != nil {
-		t.Fatalf("writing environment configuration: %v", err)
-	}
-	t.Setenv("APP_ENVIRONMENT", "Development")
-
-	settings, err := loadConfiguration(basePath)
-	if err != nil {
-		t.Fatalf("loadConfiguration() returned an error: %v", err)
-	}
-
-	if want := "development"; settings.App.Greeting != want {
-		t.Errorf("Greeting = %q, want %q", settings.App.Greeting, want)
-	}
-}
-
 func TestLoadConfigurationRejectsInvalidAppSettings(t *testing.T) {
 	tests := map[string]string{
 		"blank greeting":     `{"app":{"greeting":" "}}`,
