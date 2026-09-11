@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/json"
-	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
@@ -80,33 +81,75 @@ func defaultSettings() Settings {
 // struct defaults -> appsettings.json (optional) -> environment variables.
 //
 // This mirrors Microsoft.Extensions.Configuration in the sibling .NET repository and the
-// `config` crate in the sibling Rust repository.
+// `config` crate in the sibling Rust repository. Note that .NET additionally layers an
+// appsettings.{DOTNET_ENVIRONMENT}.json file, because its host provides that for free; it is
+// deliberately not reimplemented here.
 func loadConfiguration(path string) (Settings, error) {
 	settings := defaultSettings()
 	k := koanf.New(".")
 
-	// The file is optional so the binary runs unchanged outside a container.
-	if err := k.Load(file.Provider(path), json.Parser()); err != nil {
-		if !strings.Contains(err.Error(), "no such file") && !strings.Contains(err.Error(), "cannot find the file") {
-			return settings, fmt.Errorf("loading %s: %w", path, err)
-		}
+	if err := loadOptionalConfigurationFile(k, path); err != nil {
+		return settings, err
 	}
 
 	// APP__GREETING -> app.greeting
-	if err := k.Load(env.Provider("APP__", ".", appEnvKey), nil); err != nil {
+	if err := k.Load(env.Provider(".", env.Opt{
+		Prefix: "APP__",
+		TransformFunc: func(key, value string) (string, any) {
+			return appEnvKey(key), value
+		},
+	}), nil); err != nil {
 		return settings, fmt.Errorf("loading APP__ environment variables: %w", err)
 	}
 
 	// GIT_TAG -> git_tag, GITHUB_RUN_ID -> github_run_id
-	if err := k.Load(env.Provider("GIT", ".", strings.ToLower), nil); err != nil {
+	if err := k.Load(env.Provider(".", env.Opt{
+		Prefix: "GIT",
+		TransformFunc: func(key, value string) (string, any) {
+			return strings.ToLower(key), value
+		},
+	}), nil); err != nil {
 		return settings, fmt.Errorf("loading GIT environment variables: %w", err)
 	}
 
 	if err := k.Unmarshal("", &settings); err != nil {
 		return settings, fmt.Errorf("unmarshalling configuration: %w", err)
 	}
+	if err := settings.validate(); err != nil {
+		return settings, err
+	}
 
 	return settings, nil
+}
+
+func loadOptionalConfigurationFile(k *koanf.Koanf, path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return fmt.Errorf("checking %s: %w", path, err)
+	}
+
+	if err := k.Load(file.Provider(path), json.Parser()); err != nil {
+		return fmt.Errorf("loading %s: %w", path, err)
+	}
+
+	return nil
+}
+
+func (settings Settings) validate() error {
+	if strings.TrimSpace(settings.App.Greeting) == "" {
+		return fmt.Errorf("app.greeting must not be empty")
+	}
+	if settings.App.IntervalSeconds < 1 || settings.App.IntervalSeconds > 3600 {
+		return fmt.Errorf("app.interval_seconds must be between 1 and 3600")
+	}
+	if settings.App.LogFormat != LogFormatText && settings.App.LogFormat != LogFormatJSON {
+		return fmt.Errorf("app.log_format must be text or json")
+	}
+
+	return nil
 }
 
 // appEnvKey maps an APP__ prefixed environment variable name onto a dotted configuration key.

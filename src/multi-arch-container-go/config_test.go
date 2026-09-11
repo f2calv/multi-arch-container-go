@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -47,6 +50,30 @@ func TestLoadConfigurationEnvironmentOverridesDefaults(t *testing.T) {
 	}
 	if settings.GitBranch != unknown {
 		t.Errorf("GitBranch = %q, want %q (unset variables keep their default)", settings.GitBranch, unknown)
+	}
+}
+
+func TestLoadConfigurationRejectsInvalidAppSettings(t *testing.T) {
+	tests := map[string]string{
+		"blank greeting":     `{"app":{"greeting":" "}}`,
+		"interval too small": `{"app":{"interval_seconds":0}}`,
+		"interval too large": `{"app":{"interval_seconds":3601}}`,
+		"unknown log format": `{"app":{"log_format":"xml"}}`,
+	}
+
+	for name, contents := range tests {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "appsettings.json")
+			if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+				t.Fatalf("writing configuration: %v", err)
+			}
+
+			_, err := loadConfiguration(path)
+
+			if err == nil || !strings.HasPrefix(err.Error(), "app.") {
+				t.Errorf("loadConfiguration() error = %v, want app validation error", err)
+			}
+		})
 	}
 }
 
