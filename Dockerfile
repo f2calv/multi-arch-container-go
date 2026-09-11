@@ -75,7 +75,7 @@ EOF
 # ------------------------------------------------------------------------------
 FROM gcr.io/distroless/static-debian12:nonroot AS final
 WORKDIR /app
-COPY --from=build /out/multi-arch-container-go .
+COPY --link --from=build /out/multi-arch-container-go .
 # Base configuration; every value can be overridden by an environment variable at runtime.
 COPY appsettings.json .
 

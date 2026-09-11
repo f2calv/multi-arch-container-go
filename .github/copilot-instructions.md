@@ -14,6 +14,7 @@ Detailed conventions live in scoped instruction files under `.github/instruction
 | File | Applies to | Covers |
 | --- | --- | --- |
 | `go.instructions.md` | `**/*.go` | Go style, packages, error handling, logging, configuration, concurrency, testing |
+| `docker.instructions.md` | `**/Dockerfile*`, `.dockerignore` | Multi-arch builds, stage structure, caching, provenance, hardening |
 | `github-actions.instructions.md` | workflows / `action.yml` | GitHub Actions naming, YAML, security, GitVersion |
 | `documentation.instructions.md` | `**/*.md` | README consistency & Mermaid diagrams |
 
