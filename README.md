@@ -38,6 +38,30 @@ These repositories are **application code only** - Kubernetes packaging lives in
   - Build Container + Push To GitHub Packages
   - GitHub Release
 
+## Project Structure
+
+- `src/multi-arch-container-go/` - application source.
+  - `main.go` - entry point; configuration, logging and signal wiring only.
+  - `config.go` - `AppConfig` / `Settings` types and the layered loader.
+  - `telemetry.go` - `log/slog` handler installation.
+  - `worker.go` - the worker loop.
+  - `config_test.go` - unit tests.
+- `appsettings.json` - base configuration.
+- `go.mod` / `go.sum` - module definition, pinned toolchain version and dependency checksums.
+- `Dockerfile` - two-stage, cross-compiling, multi-architecture build.
+- `.github/workflows/ci.yml` - CI/CD using reusable workflows from [f2calv/gha-workflows](https://github.com/f2calv/gha-workflows).
+- `.devcontainer/` - VS Code devcontainer (Go toolchain + Docker-outside-of-Docker). All Go tooling runs in the container; nothing is installed on the host.
+- `build.sh` / `build.ps1` - local build scripts for manual testing.
+
+## Technology Stack
+
+- **Language**: Go (toolchain version pinned in `go.mod`)
+- **Logging**: `log/slog` (standard library), with a text or JSON handler selected by configuration
+- **Configuration**: [koanf](https://github.com/knadh/koanf) (`appsettings.json`, then environment variables)
+- **Container**: Docker (multi-stage, distroless static final image, non-root)
+- **CI/CD**: GitHub Actions (reusable workflows from [f2calv/gha-workflows](https://github.com/f2calv/gha-workflows))
+- **Versioning**: GitVersion (MainLine mode)
+
 ## Platform Mapping
 
 `docker buildx` injects `TARGETARCH` and `TARGETVARIANT` into the build, and the Dockerfile maps them onto [Go's `GOARCH`](https://go.dev/doc/install/source#environment):
