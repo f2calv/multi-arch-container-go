@@ -42,8 +42,9 @@ type multiHandler struct {
 // (debug|info|warn|error) and defaults to info.
 //
 // TODO: ctx is the signal-cancelling context from main, so a SIGTERM arriving during startup will
-//       fail resource and exporter construction. Build the providers from context.Background() and
-//       reserve the cancellable context for the worker.
+//
+//	fail resource and exporter construction. Build the providers from context.Background() and
+//	reserve the cancellable context for the worker.
 func initTelemetry(ctx context.Context, cfg AppConfig, version string) (func(context.Context) error, error) {
 	level := slog.LevelInfo
 	if value, ok := os.LookupEnv("LOG_LEVEL"); ok && value != "" {
