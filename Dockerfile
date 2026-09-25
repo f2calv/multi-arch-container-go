@@ -16,12 +16,12 @@
 #
 # Pinned to $BUILDPLATFORM (the native architecture of the machine running the
 # build) and CROSS-COMPILES to $TARGETPLATFORM. The alternative - emulating the
-# target architecture under QEMU - is typically 10-50x slower.
+# target architecture under QEMU - is often an order of magnitude slower.
 #
 # Go has the easiest compiled cross-platform story: the toolchain ships
 # every target out of the box, so it is purely a matter of setting GOOS/GOARCH.
 # ------------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1-trixie AS build
 WORKDIR /src
 
 ARG APP_NAME=multi-arch-container-go
@@ -30,8 +30,10 @@ ARG APP_NAME=multi-arch-container-go
 # Copy ONLY the files that influence module resolution so that editing a .go file
 # reuses the cached download. `go mod download` is platform-agnostic, so it is
 # performed BEFORE TARGETARCH is introduced and is shared by every architecture.
+# The module cache mount uses sharing=shared because `go` keeps its own lock
+# inside the cache, so concurrent platform legs coordinate safely.
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=shared \
     go mod download
 
 # -- Compile layer -------------------------------------------------------------
@@ -44,7 +46,7 @@ COPY . .
 # Concatenating the two gives a single flat token to switch on: amd64|arm64|armv7.
 ARG TARGETARCH
 ARG TARGETVARIANT
-RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=shared \
     --mount=type=cache,target=/root/.cache/go-build,id=go-build-${TARGETARCH}${TARGETVARIANT},sharing=locked <<EOF
 set -eux
 # Map the Docker platform onto GOARCH (+ GOARM for 32-bit ARM).
@@ -70,10 +72,10 @@ EOF
 #
 # Alternatives, smallest to largest:
 #   scratch                                   ~0MB, but no CA certs, no /etc/passwd, no tzdata
-#   gcr.io/distroless/static-debian12:nonroot ~2MB, CA certs + tzdata + non-root user (used here)
-#   gcr.io/distroless/base-debian12:nonroot   ~20MB, adds glibc for CGO_ENABLED=1 builds
+#   gcr.io/distroless/static-debian13:nonroot ~2MB, CA certs + tzdata + non-root user (used here)
+#   gcr.io/distroless/base-debian13:nonroot   ~20MB, adds glibc for CGO_ENABLED=1 builds
 # ------------------------------------------------------------------------------
-FROM gcr.io/distroless/static-debian12:nonroot AS final
+FROM gcr.io/distroless/static-debian13:nonroot AS final
 WORKDIR /app
 COPY --link --from=build /out/multi-arch-container-go .
 # Base configuration; every value can be overridden by an environment variable at runtime.
