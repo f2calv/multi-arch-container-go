@@ -43,4 +43,4 @@ Configuration keys are **snake_case** in both `appsettings.json` and the environ
 
 ## Container Conventions
 
-- The final image is `gcr.io/distroless/static-debian12:nonroot`, which requires `CGO_ENABLED=0` so the binary is fully static.
+- The final image is `gcr.io/distroless/static-debian13:nonroot`, which requires `CGO_ENABLED=0` so the binary is fully static.
